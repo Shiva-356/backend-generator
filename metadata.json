@@ -1,0 +1,6 @@
+{
+  "name": "Backend Generator",
+  "description": "Web-based Java Spring Boot backend code generator with entity modeling, database configuration, and ZIP export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,71 @@
+name: Backend Generator CI & Generated Project Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+# Enforce least-privilege permissions: read-only access to repository contents
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify Generator & Compile Representative Projects
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # Spring Boot 3.x supports Java 17 and 21 LTS
+        java-version: ['17', '21']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run TypeScript typecheck / lint
+        run: npm run lint
+
+      - name: Run generator and packaging unit tests
+        run: npm run test
+
+      - name: Run frontend production build
+        run: npm run build
+
+      - name: Set up JDK ${{ matrix.java-version }} and Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+          cache: 'maven'
+
+      - name: Verify toolchain availability
+        run: |
+          java -version
+          mvn -version
+
+      - name: Run generated project verification matrix (Native Maven build & tests)
+        # Note: Network access is required during this step to resolve standard Maven Central dependencies
+        # (Spring Boot 3 starter parent, spring-data-jpa, JJWT, PostgreSQL/MySQL drivers, etc.)
+        env:
+          JWT_SECRET: "ci_test_secret_key_minimum_256_bits_for_spring_security_6_testing!"
+        run: npm run verify:generated
+
+      - name: Upload diagnostic logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-failure-logs-java-${{ matrix.java-version }}
+          path: /tmp/sb-verify-*
+          retention-days: 7

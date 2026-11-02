@@ -1,0 +1,56 @@
+{
+	"templates":{
+  "FOOD_DELIVERY": {
+    "templateName": "Food Delivery Backend",
+    "modules": ["User", "Restaurant", "Menu", "Order", "Payment"],
+    "apis": ["POST /login", "GET /restaurants", "POST /order"],
+    "databaseTables": ["users", "restaurants", "orders", "payments"],
+    "securityRules": ["JWT Authentication", "Role Based Access"]
+  },
+  "ECOMMERCE": {
+    "templateName": "E-Commerce Backend",
+    "modules": ["User", "Product", "Cart", "Order"],
+    "apis": ["GET /products", "POST /checkout"],
+    "databaseTables": ["users", "products", "orders"],
+    "securityRules": ["JWT Authentication"]
+  },
+  "BOOKING": {
+      "templateName": "Booking Backend",
+      "modules": ["User","Booking","Payment"],
+      "apis": ["POST /book","POST /pay"],
+      "databaseTables": ["users","bookings","payments"],
+      "securityRules": ["JWT Auth"]
+    },
+
+  "STREAMING": {
+      "templateName": "Streaming Backend",
+      "modules": ["User","Content","Subscription"],
+      "apis": ["GET /videos","POST /subscribe"],
+      "databaseTables": ["users","videos","subscriptions"],
+      "securityRules": ["JWT Auth"]
+    },
+
+  "PAYMENT": {
+      "templateName": "Payment Backend",
+      "modules": ["User","Wallet","Transaction"],
+      "apis": ["POST /pay","GET /transactions"],
+      "databaseTables": ["users","wallets","transactions"],
+      "securityRules": ["JWT Auth","Transaction Validation"]
+    },
+  "EDUCATION_ERP": {
+    "templateName": "Education ERP Backend",
+    "modules": ["Student", "Faculty", "Course"],
+    "apis": ["POST /login", "GET /students"],
+    "databaseTables": ["students", "faculty", "courses"],
+    "securityRules": ["Role Based Access"]
+  },
+
+  "CUSTOM": {
+    "templateName": "Custom Backend",
+    "modules": ["User"],
+    "apis": ["POST /login"],
+    "databaseTables": ["users"],
+    "securityRules": ["Basic Security"]
+  }
+  }
+}
