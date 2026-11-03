@@ -185,6 +185,7 @@ test('FinTech Startup Backend: Generates atomic transfer logic, InsufficientFund
   assert.match(workflowService.content, /REGULATORY DISCLAIMER/);
 
   const workflowController = findFile(project.files, 'controller/workflow/FintechWorkflowController.java');
+  assert.ok(workflowController, 'Missing FintechWorkflowController.java');
   assert.match(workflowController.content, /Authentication authentication/);
   assert.doesNotMatch(workflowController.content, /X-User-Id/);
 
