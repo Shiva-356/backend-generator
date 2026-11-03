@@ -319,7 +319,7 @@ export const REPRESENTATIVE_MATRIX: { id: string; name: string; config: ProjectC
 // Toolchain Detection (JDK & Maven)
 // -----------------------------------------------------------------------------
 
-export function isToolchainAvailable(): { available: boolean; javaVersion?: string; mavenVersion?: string; reason?: string } {
+export function isToolchainAvailable(): { available: boolean; javaVersion?: string; javaMajorVersion?: number; mavenVersion?: string; reason?: string } {
   try {
     const javaCheck = spawnSync('java', ['-version'], { stdio: 'pipe', encoding: 'utf8' });
     if (javaCheck.error || javaCheck.status !== 0) {
@@ -333,7 +333,10 @@ export function isToolchainAvailable(): { available: boolean; javaVersion?: stri
 
     const javaVer = (javaCheck.stderr || javaCheck.stdout || '').split('\n')[0];
     const mvnVer = (mvnCheck.stdout || '').split('\n')[0];
-    return { available: true, javaVersion: javaVer, mavenVersion: mvnVer };
+    const match = javaVer.match(/(?:version\s+"(\d+)|openjdk\s+(\d+)|java\s+(\d+))/i);
+    const javaMajorVersion = match ? parseInt(match[1] || match[2] || match[3], 10) : undefined;
+
+    return { available: true, javaVersion: javaVer, javaMajorVersion, mavenVersion: mvnVer };
   } catch (err) {
     return { available: false, reason: err instanceof Error ? err.message : String(err) };
   }
@@ -439,13 +442,26 @@ export async function extractAndValidateZip(
 
 export async function verifyConfiguration(
   entry: { id: string; name: string; config: ProjectConfig },
-  toolchain: { available: boolean; reason?: string }
+  toolchain: { available: boolean; javaMajorVersion?: number; reason?: string }
 ): Promise<MatrixResult> {
+  // Determine effective Java version based on environment override or host JDK ceiling
+  let effectiveJavaVersion = entry.config.javaVersion;
+  if (process.env.TARGET_JAVA_VERSION === '17' || process.env.TARGET_JAVA_VERSION === '21') {
+    effectiveJavaVersion = process.env.TARGET_JAVA_VERSION;
+  } else if (toolchain.javaMajorVersion && parseInt(entry.config.javaVersion, 10) > toolchain.javaMajorVersion) {
+    effectiveJavaVersion = toolchain.javaMajorVersion >= 21 ? '21' : '17';
+  }
+
+  const effectiveConfig: ProjectConfig = {
+    ...entry.config,
+    javaVersion: effectiveJavaVersion
+  };
+
   const result: MatrixResult = {
     id: entry.id,
     name: entry.name,
-    database: entry.config.database,
-    securityEnabled: isSecurityEnabled(entry.config),
+    database: effectiveConfig.database,
+    securityEnabled: isSecurityEnabled(effectiveConfig),
     generation: 'NOT RUN',
     zipPackaging: 'NOT RUN',
     extractionAndStructure: 'NOT RUN',
@@ -461,7 +477,7 @@ export async function verifyConfiguration(
     // Step 1: In-Memory Project Generation
     let project;
     try {
-      project = generateSpringBootProject(entry.config);
+      project = generateSpringBootProject(effectiveConfig);
       result.generation = 'PASS';
     } catch (genErr) {
       result.generation = 'FAIL';
@@ -483,7 +499,7 @@ export async function verifyConfiguration(
     // Step 3: Extraction and Structural Validation
     let projectRoot: string;
     try {
-      const extracted = await extractAndValidateZip(zipBytes, entry.config, tempBaseDir);
+      const extracted = await extractAndValidateZip(zipBytes, effectiveConfig, tempBaseDir);
       projectRoot = extracted.rootDir;
       result.extractionAndStructure = 'PASS';
     } catch (structErr) {

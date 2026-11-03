@@ -344,6 +344,10 @@ export function generateSpringBootProject(config: ProjectConfig): GeneratedProje
       path: `${testPackagePath}/security/AuthControllerTest.java`,
       content: generateAuthControllerTest(config)
     });
+    files.push({
+      path: 'src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker',
+      content: 'mock-maker-subclass\n'
+    });
   }
 
   // Sort files deterministically by relative path

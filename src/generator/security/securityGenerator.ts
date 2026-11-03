@@ -1048,10 +1048,14 @@ export function generateAuthControllerTest(config: ProjectConfig): string {
 
   return `package ${packageName}.security;
 
+import ${packageName}.exception.GlobalExceptionHandler;
+import ${packageName}.security.config.JwtAccessDeniedHandler;
+import ${packageName}.security.config.JwtAuthenticationEntryPoint;
 import ${packageName}.security.controller.AuthController;
 import ${packageName}.security.dto.AuthRequest;
 import ${packageName}.security.dto.AuthResponse;
 import ${packageName}.security.dto.RegisterRequest;
+import ${packageName}.security.filter.JwtAuthenticationFilter;
 import ${packageName}.security.service.AuthService;
 import ${packageName}.security.service.JwtService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -1061,6 +1065,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -1074,6 +1079,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = AuthController.class)
 @AutoConfigureMockMvc(addFilters = false) // Unit slice test for AuthController
+@Import(GlobalExceptionHandler.class)
 class AuthControllerTest {
 
     @Autowired
@@ -1090,6 +1096,15 @@ class AuthControllerTest {
 
     @MockBean
     private UserDetailsService userDetailsService;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthFilter;
+
+    @MockBean
+    private JwtAuthenticationEntryPoint authenticationEntryPoint;
+
+    @MockBean
+    private JwtAccessDeniedHandler accessDeniedHandler;
 
     @Test
     @DisplayName("POST /api/auth/register should create a user and return token")

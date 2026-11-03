@@ -68,6 +68,7 @@ jobs:
         # (Spring Boot 3 starter parent, spring-data-jpa, JJWT, PostgreSQL/MySQL drivers, etc.)
         env:
           JWT_SECRET: "ci_test_secret_key_minimum_256_bits_for_spring_security_6_testing!"
+          TARGET_JAVA_VERSION: ${{ matrix.java-version }}
         run: npm run verify:generated
 
       - name: Upload diagnostic logs on failure

@@ -80,6 +80,9 @@ export function generateRequestDtoClass(entity: EntityConfig, config: ProjectCon
     const cap = capitalize(field.name);
     const getterPrefix = field.type === 'Boolean' ? (field.name.startsWith('is') ? field.name : `is${cap}`) : `get${cap}`;
     gettersAndSetters.push(`    public ${field.type} ${getterPrefix}() {\n        return ${field.name};\n    }\n`);
+    if (field.type === 'Boolean' && !field.name.startsWith('is')) {
+      gettersAndSetters.push(`    public ${field.type} get${cap}() {\n        return ${field.name};\n    }\n`);
+    }
     gettersAndSetters.push(`    public void set${cap}(${field.type} ${field.name}) {\n        this.${field.name} = ${field.name};\n    }\n`);
   });
 
@@ -161,6 +164,9 @@ export function generateResponseDtoClass(entity: EntityConfig, config: ProjectCo
     const cap = capitalize(field.name);
     const getterPrefix = field.type === 'Boolean' ? (field.name.startsWith('is') ? field.name : `is${cap}`) : `get${cap}`;
     gettersAndSetters.push(`    public ${field.type} ${getterPrefix}() {\n        return ${field.name};\n    }\n`);
+    if (field.type === 'Boolean' && !field.name.startsWith('is')) {
+      gettersAndSetters.push(`    public ${field.type} get${cap}() {\n        return ${field.name};\n    }\n`);
+    }
     gettersAndSetters.push(`    public void set${cap}(${field.type} ${field.name}) {\n        this.${field.name} = ${field.name};\n    }\n`);
   });
 

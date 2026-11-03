@@ -222,6 +222,45 @@ public class ErrorResponse {
 export function generateGlobalExceptionHandler(config: ProjectConfig): string {
   const { packageName, options } = config;
   const enableValidation = options?.enableValidation ?? true;
+  const securityEnabled = Boolean(config.security?.enabled || config.options?.security?.enabled);
+
+  const securityImports = securityEnabled
+    ? `import org.springframework.security.access.AccessDeniedException;\nimport org.springframework.security.authentication.BadCredentialsException;\n`
+    : '';
+
+  const securityHandlers = securityEnabled
+    ? `
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(
+            BadCredentialsException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                "Unauthorized",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            AccessDeniedException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
+    }
+`
+    : '';
 
   const validationHandler = enableValidation ? `
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -250,7 +289,7 @@ export function generateGlobalExceptionHandler(config: ProjectConfig): string {
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-${enableValidation ? 'import org.springframework.validation.FieldError;\nimport org.springframework.web.bind.MethodArgumentNotValidException;\nimport java.util.HashMap;\nimport java.util.Map;\n' : ''}import org.springframework.web.bind.annotation.ExceptionHandler;
+${securityImports}${enableValidation ? 'import org.springframework.validation.FieldError;\nimport org.springframework.web.bind.MethodArgumentNotValidException;\nimport java.util.HashMap;\nimport java.util.Map;\n' : ''}import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
@@ -330,7 +369,22 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(response, HttpStatus.FORBIDDEN);
     }
-${validationHandler}
+${validationHandler}${securityHandlers}
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex,

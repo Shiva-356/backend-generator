@@ -9,6 +9,7 @@ import {
   createProjectConfigFromTemplate,
   resolveTemplateKey
 } from './index';
+import { REPRESENTATIVE_MATRIX } from '../../scripts/verify-generated-projects';
 
 // Helper to find a generated file by exact or partial path
 function findFile(files: { path: string; content: string }[], pathPattern: string) {
@@ -1215,5 +1216,94 @@ test('25. All seven domain templates have verified relationships and zero recurs
         );
       }
     }
+  }
+});
+
+test('26. Regression: Boolean entity and DTO fields provide both isX and getX accessors', () => {
+  const config: ProjectConfig = {
+    projectName: 'task-service',
+    groupId: 'com.example.tasks',
+    artifactId: 'task-service',
+    packageName: 'com.example.tasks',
+    javaVersion: '17',
+    springBootVersion: '3.3.0',
+    database: 'h2',
+    entities: [
+      {
+        name: 'Task',
+        fields: [
+          { name: 'title', type: 'String', required: true },
+          { name: 'completed', type: 'Boolean', defaultValue: 'false' }
+        ]
+      }
+    ]
+  };
+
+  const project = generateSpringBootProject(config);
+
+  const entity = findFile(project.files, 'entity/Task.java');
+  assert.ok(entity);
+  assert.match(entity.content, /public Boolean isCompleted\(\)/);
+  assert.match(entity.content, /public Boolean getCompleted\(\)/);
+
+  const reqDto = findFile(project.files, 'dto/TaskRequestDTO.java');
+  assert.ok(reqDto);
+  assert.match(reqDto.content, /public Boolean isCompleted\(\)/);
+  assert.match(reqDto.content, /public Boolean getCompleted\(\)/);
+
+  const resDto = findFile(project.files, 'dto/TaskResponseDTO.java');
+  assert.ok(resDto);
+  assert.match(resDto.content, /public Boolean isCompleted\(\)/);
+  assert.match(resDto.content, /public Boolean getCompleted\(\)/);
+
+  const mapper = findFile(project.files, 'mapper/TaskMapper.java');
+  assert.ok(mapper);
+  assert.match(mapper.content, /dto\.getCompleted\(\)/);
+  assert.match(mapper.content, /entity\.getCompleted\(\)/);
+});
+
+test('27. Regression: GlobalExceptionHandler handles BadCredentialsException (401) and IllegalArgumentException (400) when security is enabled', () => {
+  const config: ProjectConfig = {
+    projectName: 'secure-api',
+    groupId: 'com.example.secure',
+    artifactId: 'secure-api',
+    packageName: 'com.example.secure',
+    javaVersion: '17',
+    springBootVersion: '3.3.0',
+    database: 'postgresql',
+    security: { enabled: true },
+    entities: [
+      {
+        name: 'Document',
+        fields: [{ name: 'title', type: 'String', required: true }]
+      }
+    ]
+  };
+
+  const project = generateSpringBootProject(config);
+
+  const handler = findFile(project.files, 'exception/GlobalExceptionHandler.java');
+  assert.ok(handler);
+  assert.match(handler.content, /BadCredentialsException/);
+  assert.match(handler.content, /HttpStatus\.UNAUTHORIZED/);
+  assert.match(handler.content, /IllegalArgumentException/);
+  assert.match(handler.content, /HttpStatus\.BAD_REQUEST/);
+
+  const authTest = findFile(project.files, 'AuthControllerTest.java');
+  assert.ok(authTest);
+  assert.match(authTest.content, /@Import\(GlobalExceptionHandler\.class\)/);
+  assert.match(authTest.content, /JwtAuthenticationFilter jwtAuthFilter/);
+  assert.match(authTest.content, /JwtAuthenticationEntryPoint authenticationEntryPoint/);
+  assert.match(authTest.content, /JwtAccessDeniedHandler accessDeniedHandler/);
+});
+
+test('28. Regression: Representative matrix projects generate consistent Java and configuration assets', () => {
+  assert.equal(REPRESENTATIVE_MATRIX.length, 8);
+
+  for (const item of REPRESENTATIVE_MATRIX) {
+    const project = generateSpringBootProject(item.config);
+    assert.ok(project.files.length >= 10, `Project ${item.id} has fewer than 10 files`);
+    assert.ok(findFile(project.files, 'pom.xml'), `Project ${item.id} missing pom.xml`);
+    assert.ok(findFile(project.files, 'application.properties'), `Project ${item.id} missing application.properties`);
   }
 });
